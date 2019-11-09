@@ -16,7 +16,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest"
+    "test": "jest --ci"
   },
   "peerDependencies": {
     "fp-ts": "^2.1.1"
