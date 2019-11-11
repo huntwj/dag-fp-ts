@@ -14,8 +14,8 @@ export type Edge = {
 }
 
 export type Dag<T extends Id> = {
-  nodes: NodeInfo<T>[];
-  edges: Edge[];
+  readonly nodes: NodeInfo<T>[];
+  readonly edges: Edge[];
 }
 
 export interface NodeAddition<T extends Id> {
