@@ -13,7 +13,7 @@ export type Edge = {
   to: IdType;
 }
 
-export type Dag<T extends Id = Id> = {
+export type Dag<T extends Id> = {
   nodes: NodeInfo<T>[];
   edges: Edge[];
 }
@@ -25,5 +25,6 @@ export interface NodeAddition<T extends Id> {
 export type BuilderInstruction<T extends Id> = NodeAddition<T>;
 
 export interface Builder<T extends Id> {
+  startingDag: Dag<T>;
   instructions: BuilderInstruction<T>[];
 }

@@ -14,7 +14,8 @@ export const empty = <T extends Id = Id>(): Dag<T> => ({
   edges: [],
 });
 
-export const emptyBuilder = <T extends Id = Id>(): Builder<T> => ({
+export const builder = <T extends Id = Id>(startingDag?: Dag<T>): Builder<T> => ({
+  startingDag: typeof startingDag === "undefined" ? empty<T>() : startingDag,
   instructions: [],
 });
 
@@ -29,7 +30,8 @@ const createAddInstruction =
 // graphs.
 export const addNode = <T extends Id>(node: T, parentIds: IdType[]) => (builder: Builder<T>) =>
   ({
-    instructions: [...builder.instructions, createAddInstruction(node, parentIds)]
+    instructions: [...builder.instructions, createAddInstruction(node, parentIds)],
+    startingDag: builder.startingDag,
   });
 
 type BuildError = string; // TODO: Do something nicer here?
@@ -43,10 +45,10 @@ const failedInstruction = <T extends Id>(instr: BuilderInstruction<T>, err: Buil
 });
 
 export const build =
-  <T extends Id>(startDag?: Dag<T>) =>
-    (builder: Builder<T>): E.Either<BuildError, Dag> =>
+  <T extends Id>() =>
+    (builder: Builder<T>): E.Either<BuildError, Dag<T>> =>
       buildStep(
-        typeof startDag === "undefined" ? empty() : startDag,
+        builder.startingDag,
         builder.instructions,
         [],
       );
