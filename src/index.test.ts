@@ -33,7 +33,7 @@ const addViewOwn = addNode(viewOwnNode, [viewAllNode.id, editOwnNode.id]);
 describe("Directed Acyclic Graph", () => {
   describe("empty()", () => {
     it("returns an empty graph", () => {
-      const e: Dag = empty();
+      const e = empty();
 
       expect(e.edges.length).toBe(0);
       expect(e.nodes.length).toBe(0);

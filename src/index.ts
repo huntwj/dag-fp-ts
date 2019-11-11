@@ -9,7 +9,7 @@ import { Id, Dag, Builder, IdType, NodeAddition, BuilderInstruction } from "./ty
 
 export { Dag };
 
-export const empty = <T extends Id = Id>(): Dag<T> => ({
+export const empty = <T extends Id = never>(): Dag<T> => ({
   nodes: [],
   edges: [],
 });
