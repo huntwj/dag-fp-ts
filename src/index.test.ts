@@ -1,8 +1,8 @@
 import * as E from "fp-ts/lib/Either";
-import { some } from "fp-ts/lib/Option";
+import { none, some } from "fp-ts/lib/Option";
 import { pipe } from "fp-ts/lib/pipeable";
 
-import { addNode, build, builder, empty, Dag, getHeight } from ".";
+import { addNode, build, builder, empty, Dag, getHeight, contains, get, getParents } from ".";
 import { missingParent, duplicateNodes } from "./errors";
 
 // a test node type that passes some extra data with the id.
@@ -67,7 +67,7 @@ describe("Directed Acyclic Graph", () => {
               expect(err).toBe(missingParent("10"));
             },
               dag => {
-                console.log("dag", JSON.stringify(dag));
+                console.error("dag", JSON.stringify(dag));
                 fail("Unexpectedly got a successful DAG build.");
               })
           )
@@ -83,7 +83,7 @@ describe("Directed Acyclic Graph", () => {
               expect(err).toBe(duplicateNodes("12"));
             },
               dag => {
-                console.log("dag", JSON.stringify(dag));
+                console.error("dag", JSON.stringify(dag));
                 fail("Unexpectedly got a successful DAG build.");
               })
           );
@@ -98,7 +98,7 @@ describe("Directed Acyclic Graph", () => {
               expect(err).toBe(missingParent("12"));
             },
               dag => {
-                console.log("dag", JSON.stringify(dag));
+                console.error("dag", JSON.stringify(dag));
                 fail("Unexpectedly got a successful DAG build.");
               })
           );
@@ -212,5 +212,168 @@ describe("Directed Acyclic Graph", () => {
       });
     });
 
+  });
+
+  describe("contains(T): boolean", () => {
+    it("returns false for empty graphs", () => {
+      const result = pipe(
+        empty(),
+        contains(node("10")),
+      );
+
+      expect(result).toBe(false);
+    });
+
+    it("returns false for non-empty graphs but node not in graph", () => {
+      pipe(
+        builder(),
+        addNode(node("10"), []),
+        addNode(node("12"), ["10"]),
+        build(),
+        E.fold(
+          err => {
+            fail(`Unexpected failure building valid graph: ${err}`);
+          },
+          dag => {
+            const result = pipe(
+              dag,
+              contains(node("13")),
+            )
+            expect(result).toBe(false);
+          }
+        )
+      )
+    });
+
+    it("returns true for node in graph", () => {
+      pipe(
+        builder(),
+        addNode(node("10"), []),
+        addNode(node("12"), ["10"]),
+        build(),
+        E.fold(
+          err => {
+            fail(`Unexpected failure building valid graph: ${err}`);
+          },
+          dag => {
+            const result = pipe(
+              dag,
+              contains(node("10")),
+            )
+            expect(result).toBe(true);
+          }
+        )
+      )
+    });
+  });
+
+  describe("get(IdType): Option<T>", () => {
+    it("returns `none` for empty graphs", () => {
+      const result = pipe(
+        empty(),
+        get("10"),
+      );
+
+      expect(result).toEqual(none);
+    });
+
+    it("returns `none` for non-empty graphs but node not in graph", () => {
+      pipe(
+        builder(),
+        addNode(node("10"), []),
+        addNode(node("12"), ["10"]),
+        build(),
+        E.fold(
+          err => {
+            fail(`Unexpected failure building valid graph: ${err}`);
+          },
+          dag => {
+            const result = pipe(
+              dag,
+              get("13"),
+            )
+            expect(result).toEqual(none);
+          }
+        )
+      )
+    });
+
+    it("returns `some(node)` for node in graph", () => {
+      const ten = node("10");
+      pipe(
+        builder(),
+        addNode(ten, []),
+        addNode(node("12"), ["10"]),
+        build(),
+        E.fold(
+          err => {
+            fail(`Unexpected failure building valid graph: ${err}`);
+          },
+          dag => {
+            const result = pipe(
+              dag,
+              get("10"),
+            )
+            expect(result).toEqual(some(ten));
+          }
+        )
+      )
+    });
+
+    describe("getParents(NodeType) => (Dag): Option<T>", () => {
+      const ten = node("10");
+      const twelve = node("12");
+
+      it("returns `[]` for empty graphs", () => {
+        const result = pipe(
+          empty(),
+          getParents(ten),
+        );
+
+        expect(result).toEqual([]);
+      });
+
+      it("returns `none` for non-empty graphs but node not in graph", () => {
+        pipe(
+          builder(),
+          addNode(ten, []),
+          addNode(twelve, ["10"]),
+          build(),
+          E.fold(
+            err => {
+              fail(`Unexpected failure building valid graph: ${err}`);
+            },
+            dag => {
+              const result = pipe(
+                dag,
+                getParents(node("13")),
+              )
+              expect(result).toEqual([]);
+            }
+          )
+        )
+      });
+
+      it("returns `[parents]` for node in graph", () => {
+        pipe(
+          builder(),
+          addNode(ten, []),
+          addNode(twelve, ["10"]),
+          build(),
+          E.fold(
+            err => {
+              fail(`Unexpected failure building valid graph: ${err}`);
+            },
+            dag => {
+              const result = pipe(
+                dag,
+                getParents(twelve),
+              )
+              expect(result).toEqual([ten]);
+            }
+          )
+        )
+      });
+    });
   });
 });

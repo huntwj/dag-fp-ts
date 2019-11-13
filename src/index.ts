@@ -120,3 +120,35 @@ export const buildStep = <T extends Id>(dag: Dag<T>, pending: BuilderInstruction
       )
     )
   );
+
+export const contains = <T extends Id>(queryNode: T) => (dag: Dag<T>): boolean =>
+  dag.nodes.some(next => next.node.id === queryNode.id);
+
+export const get = <T extends Id>(queryId: IdType) => (dag: Dag<T>): O.Option<T> =>
+  pipe(
+    dag.nodes,
+    A.filterMap(nodeInfo => nodeInfo.node.id === queryId
+      ? O.some(nodeInfo.node)
+      : O.none,
+    ),
+    A.head
+  );
+
+
+export const getParents = <T extends Id>(queryNode: T) => (dag: Dag<T>): T[] =>
+  pipe(
+    dag.edges,
+    A.filterMap(edge => {
+      // We want to map all the edges to the queryNode
+      if (edge.to === queryNode.id) {
+        // ... to the actual node of the parent
+        return pipe(
+          dag,
+          get<T>(edge.from),
+        );
+      } else {
+        return O.none;
+      }
+    }),
+  );
+
