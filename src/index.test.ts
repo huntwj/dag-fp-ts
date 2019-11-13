@@ -2,7 +2,7 @@ import * as E from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { pipe } from "fp-ts/lib/pipeable";
 
-import { addNode, build, builder, empty, Dag, getHeight, contains, get, getParents } from ".";
+import { addNode, build, builder, empty, Dag, getHeight, contains, get, getParents, size } from ".";
 import { missingParent, duplicateNodes } from "./errors";
 
 // a test node type that passes some extra data with the id.
@@ -36,7 +36,7 @@ describe("Directed Acyclic Graph", () => {
       const e = empty();
 
       expect(e.edges.length).toBe(0);
-      expect(e.nodes.length).toBe(0);
+      expect(size(e)).toBe(0);
     });
   })
 
@@ -51,7 +51,7 @@ describe("Directed Acyclic Graph", () => {
             E.fold(err => {
               fail(`Builder returned an error: ${err}`);
             }, dag => {
-              expect(dag.nodes.length).toBe(1);
+              expect(size(dag)).toBe(1);
               expect(dag.edges.length).toBe(0);
               expect(getHeight("12")(dag)).toEqual(some(0));
             })
@@ -173,7 +173,7 @@ describe("Directed Acyclic Graph", () => {
                 fail(`Unexpected build failure: ${JSON.stringify(err)}`)
               },
               dag => {
-                expect(dag.nodes.length).toBe(5);
+                expect(size(dag)).toBe(5);
               }
             )
           )
@@ -201,7 +201,7 @@ describe("Directed Acyclic Graph", () => {
                       fail(`Unexpected build failure: ${JSON.stringify(err)}`)
                     },
                     dag => {
-                      expect(dag.nodes.length).toBe(5);
+                      expect(size(dag)).toBe(5);
                     }
                   ),
                 );

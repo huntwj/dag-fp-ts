@@ -14,7 +14,7 @@ export type Edge = {
 }
 
 export type Dag<T extends Id> = {
-  readonly nodes: NodeInfo<T>[];
+  readonly nodes: Map<IdType, NodeInfo<T>>;
   readonly edges: Edge[];
 }
 

@@ -1,16 +1,17 @@
 import * as A from "fp-ts/lib/Array";
 import * as E from "fp-ts/lib/Either";
+import * as M from "fp-ts/lib/Map";
 import * as O from "fp-ts/lib/Option";
 import { pipe } from "fp-ts/lib/pipeable";
 import * as S from "fp-ts/lib/Semigroup";
 
 import { missingParent, duplicateNodes } from "./errors";
-import { Id, Dag, Builder, IdType, NodeAddition, BuilderInstruction } from "./types";
+import { Id, Dag, Builder, IdType, NodeAddition, BuilderInstruction, NodeInfo } from "./types";
 
 export { Dag };
 
 export const empty = <T extends Id = never>(): Dag<T> => ({
-  nodes: [],
+  nodes: new Map(),
   edges: [],
 });
 
@@ -53,13 +54,12 @@ export const build =
         [],
       );
 
-// TODO: This is pretty inefficient for large lists. Come back to this.
 const containsId = <T extends Id>(id: IdType) => (dag: Dag<T>): boolean =>
-  dag.nodes.some((nodeInfo) => nodeInfo.node.id === id);
+  dag.nodes.has(id);
 
 export const getHeight = <T extends Id>(nodeId: IdType) => (dag: Dag<T>): O.Option<number> => {
   return pipe(
-    dag.nodes.find((nodeInfo) => nodeInfo.node.id === nodeId),
+    dag.nodes.get(nodeId),
     O.fromNullable,
     O.map(nodeInfo => nodeInfo.height),
   );
@@ -92,9 +92,13 @@ const attemptInstruction =
               from: parentId,
               to: todo.node.id,
             }));
+            // TODO: We should be less wasteful here and use a structure that
+            // reuses old bits as possible.
+            const newMap = new Map(dag.nodes);
+            newMap.set(todo.node.id, { node: todo.node, height });
             const newDag: Dag<T> = {
               edges: [...dag.edges, ...newEdges],
-              nodes: [...dag.nodes, { node: todo.node, height }],
+              nodes: newMap,
             }
             return E.right(newDag);
           }
@@ -122,16 +126,13 @@ export const buildStep = <T extends Id>(dag: Dag<T>, pending: BuilderInstruction
   );
 
 export const contains = <T extends Id>(queryNode: T) => (dag: Dag<T>): boolean =>
-  dag.nodes.some(next => next.node.id === queryNode.id);
+  dag.nodes.has(queryNode.id);
 
 export const get = <T extends Id>(queryId: IdType) => (dag: Dag<T>): O.Option<T> =>
   pipe(
-    dag.nodes,
-    A.filterMap(nodeInfo => nodeInfo.node.id === queryId
-      ? O.some(nodeInfo.node)
-      : O.none,
-    ),
-    A.head
+    dag.nodes.get(queryId),
+    O.fromNullable,
+    O.map(nodeInfo => nodeInfo.node),
   );
 
 
@@ -152,3 +153,5 @@ export const getParents = <T extends Id>(queryNode: T) => (dag: Dag<T>): T[] =>
     }),
   );
 
+export const size = <T extends Id>(dag: Dag<T>): number =>
+  dag.nodes.size;
