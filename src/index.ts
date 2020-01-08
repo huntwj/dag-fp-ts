@@ -1,12 +1,12 @@
 import * as A from "fp-ts/lib/Array";
 import * as E from "fp-ts/lib/Either";
-import * as M from "fp-ts/lib/Map";
 import * as O from "fp-ts/lib/Option";
 import { pipe } from "fp-ts/lib/pipeable";
 import * as S from "fp-ts/lib/Semigroup";
 
 import { missingParent, duplicateNodes } from "./errors";
-import { Id, Dag, Builder, IdType, NodeAddition, BuilderInstruction, NodeInfo } from "./types";
+import { Id, Dag, Builder, IdType, NodeAddition, BuilderInstruction } from "./types";
+import { Eq } from "fp-ts/lib/Eq";
 
 export { Dag };
 
@@ -14,6 +14,10 @@ export const empty = <T extends Id = never>(): Dag<T> => ({
   nodes: new Map(),
   edges: [],
 });
+
+const eqId: Eq<Id> = {
+  equals: (x, y) => x.id === y.id,
+};
 
 export const builder = <T extends Id = Id>(startingDag?: Dag<T>): Builder<T> => ({
   startingDag: typeof startingDag === "undefined" ? empty<T>() : startingDag,
@@ -136,6 +140,23 @@ export const get = <T extends Id>(queryId: IdType) => (dag: Dag<T>): O.Option<T>
   );
 
 
+export const getChildren = <T extends Id>(queryNode: T) => (dag: Dag<T>): T[] =>
+  pipe(
+    dag.edges,
+    A.filterMap(edge => {
+      // We want to map all the edges from the queryNode
+      if (edge.from === queryNode.id) {
+        // ... to the actual node of the children
+        return pipe(
+          dag,
+          get<T>(edge.to),
+        );
+      } else {
+        return O.none;
+      }
+    }),
+  );
+
 export const getParents = <T extends Id>(queryNode: T) => (dag: Dag<T>): T[] =>
   pipe(
     dag.edges,
@@ -152,6 +173,14 @@ export const getParents = <T extends Id>(queryNode: T) => (dag: Dag<T>): T[] =>
       }
     }),
   );
+
+export const isDescendantOf = <T extends Id>(target: T, ancestors: T[]) => (dag: Dag<T>): boolean => {
+  return pipe(
+    getParents(target)(dag),
+    A.findFirst((parent) => A.elem(eqId)(parent, ancestors) || isDescendantOf(parent, ancestors)(dag)),
+    O.isSome,
+  );
+}
 
 export const size = <T extends Id>(dag: Dag<T>): number =>
   dag.nodes.size;
